@@ -5,6 +5,7 @@ require_relative "page"
 require_relative "report"
 require_relative "stats"
 require "nokogiri"
+require "erb"
 
 module Repolho
   class Main
@@ -30,7 +31,7 @@ module Repolho
     def run
       parse
 
-      @page.append_raw(@previous)
+      @page.append_raw(render_erb(@previous))
       @page.append_raw(@body)
 
       @data.each do |row|
@@ -38,7 +39,7 @@ module Repolho
       end
 
       @report.call(:finish, nil)
-      @page.append_raw(@after)
+      @page.append_raw(render_erb(@after))
       @page.finalize
     end
 
@@ -153,6 +154,12 @@ module Repolho
       return { content: "" } unless element
 
       { content: element.inner_html }
+    end
+
+    def render_erb(content)
+      return "" if content.nil? || content.empty?
+
+      ERB.new(content).result(@page.instance_eval { binding })
     end
   end
 end
