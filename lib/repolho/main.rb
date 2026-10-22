@@ -6,19 +6,83 @@ require_relative "report"
 require_relative "stats"
 require "nokogiri"
 require "erb"
+require "cgi"
 
 module Repolho
   class Main
+    PAGINATION_TBODY = <<~HTML
+      <tbody id="report-pagination" data-max="<%= page_number %>">
+        <tr>
+          <td colspan="200" id="report-pagination-links">
+            <a href="#" id="report-first-page"><%= @pagination_first %></a>
+            <a href="#" id="report-prev-page"><%= @pagination_prev %></a>
+            <input type="number" id="report-current-page" min="1" max="<%= page_number %>" value="1"/>
+            <a href="#" id="report-next-page"><%= @pagination_next %></a>
+            <a href="#" id="report-last-page"><%= @pagination_last %></a>
+          </td>
+        </tr>
+      </tbody>
+    HTML
+
+    PAGINATION_SCRIPT = <<~HTML
+      <script>
+        function change_report_page(page) {
+          try {
+            const pages = document.querySelectorAll(".repolho-page");
+            page = parseInt(page, 10);
+            if (isNaN(page) || page < 1) page = 1;
+            if (page > pages.length) page = pages.length;
+
+            pages.forEach(function(p) { p.style.display = "none"; });
+            var target = document.querySelector('[data-page="' + page + '"]');
+            if (target) target.style.display = "";
+
+            var input = document.getElementById("report-current-page");
+            if (input) input.value = page;
+          } catch (e) {
+            console.error("Repolho pagination error:", e);
+          }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+          try {
+            var first = document.getElementById("report-first-page");
+            var prev  = document.getElementById("report-prev-page");
+            var next  = document.getElementById("report-next-page");
+            var last  = document.getElementById("report-last-page");
+            var input = document.getElementById("report-current-page");
+
+            if (first) first.addEventListener("click", function(e) { e.preventDefault(); change_report_page(1); });
+            if (prev)  prev.addEventListener("click",  function(e) { e.preventDefault(); change_report_page(parseInt(input && input.value || 1, 10) - 1); });
+            if (next)  next.addEventListener("click",  function(e) { e.preventDefault(); change_report_page(parseInt(input && input.value || 1, 10) + 1); });
+            if (last)  last.addEventListener("click",  function(e) { e.preventDefault(); change_report_page(9999); });
+            if (input) input.addEventListener("change", function(e) { change_report_page(e.target.value); });
+
+            change_report_page(1);
+          } catch (e) {
+            console.error("Repolho pagination init error:", e);
+          }
+        });
+      </script>
+    HTML
+
     def initialize(path, data, locals = {})
-      @path     = path
-      @data     = normalize_data(data)
-      @locals   = locals
-      @columns  = make_columns
-      @page     = Page.new("page", locals, make_stats)
-      @report   = Report.new("report", locals, make_stats)
-      @previous = ""
-      @after    = ""
-      @body     = ""
+      @path        = path
+      @data        = normalize_data(data)
+      @locals      = locals
+      @columns     = make_columns
+      @page        = Page.new("page", locals, make_stats)
+      @report      = Report.new("report", locals, make_stats)
+      @previous    = ""
+      @after       = ""
+      @body        = ""
+      @pagination  = false
+      @pagination_labels = {
+        first: "First",
+        prev:  "<",
+        next:  ">",
+        last:  "Last"
+      }
 
       @report.containers << @page
       @report.page = @page
@@ -39,11 +103,38 @@ module Repolho
       end
 
       @report.call(:finish, nil)
-      @page.append_raw(render_erb(@after))
       @page.finalize
+
+      # After finalize, page_number is one past the last page.
+      # Set it to the real total so ERB (pagination + @after) sees the correct value.
+      total_pages = [@page.page_number - 1, 1].max
+      @page.instance_variable_set(:@page_number, total_pages)
+
+      after_content = render_erb(@after)
+
+      if @pagination && total_pages > 1
+        inject_pagination_labels
+        @page.append_raw(render_erb(PAGINATION_TBODY))
+
+        script = PAGINATION_SCRIPT
+        if after_content =~ /<\/body>/i
+          after_content = after_content.sub(/<\/body>/i, "#{script}</body>")
+        else
+          after_content += script
+        end
+      end
+
+      @page.append_raw(after_content)
     end
 
     private
+
+    def inject_pagination_labels
+      @page.instance_variable_set(:@pagination_first, @pagination_labels[:first])
+      @page.instance_variable_set(:@pagination_prev,  @pagination_labels[:prev])
+      @page.instance_variable_set(:@pagination_next,  @pagination_labels[:next])
+      @page.instance_variable_set(:@pagination_last,  @pagination_labels[:last])
+    end
 
     def make_columns
       return [] if @data.empty?
@@ -94,17 +185,30 @@ module Repolho
     end
 
     def extract_sections(content)
-      matches = content.gsub(/\n/, "").match(/(?<previous>\A.*?)(?<body><body[^>]*>.*?)(?<report><report>.*?<\/report>)(?<after>.*)\z/m)
+      matches = content.gsub(/\n/, "").match(/(?<previous>\A.*?)(?<body><body[^>]*>.*?)(?<report><report[^>]*>.*?<\/report>)(?<after>.*)\z/m)
 
-      @body     = matches[:body]
-      @previous = matches[:previous]
-      @after    = matches[:after]
+      @body       = matches[:body]
+      @previous   = matches[:previous]
+      @after      = matches[:after]
       @report_xml = matches[:report]
     end
 
     def build_report_structure
       parsed = Nokogiri::HTML.parse(@report_xml)
       report = parsed.search("report")
+
+      report_node = report.first
+      @pagination = report_node["pagination"] == "true"
+
+      if @pagination
+        @pagination_labels[:first] = report_node["pagination-first"] if report_node["pagination-first"]
+        @pagination_labels[:prev]  = report_node["pagination-prev"]  if report_node["pagination-prev"]
+        @pagination_labels[:next]  = report_node["pagination-next"]  if report_node["pagination-next"]
+        @pagination_labels[:last]  = report_node["pagination-last"]  if report_node["pagination-last"]
+
+        # Escape for safe HTML output
+        @pagination_labels.transform_values! { |v| CGI.escapeHTML(v.to_s) }
+      end
 
       @report.header = info(report.search("> report-header").first)
       @report.footer = info(report.search("> report-footer").first)

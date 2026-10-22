@@ -58,7 +58,7 @@ sections). Everything inside the custom elements is processed as ERB.
 
 | Element | Purpose | Attributes |
 |---------|---------|------------|
-| `<report>` | Root container of the report | — |
+| `<report>` | Root container of the report | `pagination` (optional, `"true"`): enables client-side page navigation. Also accepts `pagination-first`, `pagination-prev`, `pagination-next`, `pagination-last` for custom labels. |
 | `<report-page>` | Defines a page (required, only one) | `rows` (required): max data rows per page |
 | `<report-group>` | Nested grouping | `id` (required), `attr` (required), `reprint-header-on-page-break` (optional, `"true"`) |
 | `<report-header>` | Header of the current container | — |
@@ -94,6 +94,56 @@ Repolho automatically wraps each page like this:
 
 The `data-page` attribute and the `break-after` style are injected for you.
 You do not need to write the `<tbody>` yourself.
+
+### Client-side pagination
+
+If you set `pagination="true"` on the root `<report>` element, Repolho
+appends a navigation bar just before the `after` section (still inside
+the table) and a small pure-ES6 script at the end of the document
+(inserted before `</body>` when present, otherwise appended). The bar
+is omitted when the report has only one page.
+
+Optional attributes let you customize the labels:
+
+| Attribute | Default | Description |
+|-----------|---------|-------------|
+| `pagination-first` | `First` | First page link text |
+| `pagination-prev` | `<` | Previous page link text |
+| `pagination-next` | `>` | Next page link text |
+| `pagination-last` | `Last` | Last page link text |
+
+```html
+<report pagination="true"
+        pagination-first="Primeira"
+        pagination-prev="«"
+        pagination-next="»"
+        pagination-last="Última">
+  ...
+</report>
+```
+
+The generated controls look like:
+
+```html
+<tbody id="report-pagination" data-max="N">
+  <tr>
+    <td colspan="200" id="report-pagination-links">
+      <a href="#" id="report-first-page">First</a>
+      <a href="#" id="report-prev-page"><</a>
+      <input type="number" id="report-current-page" min="1" max="N" value="1"/>
+      <a href="#" id="report-next-page">></a>
+      <a href="#" id="report-last-page">Last</a>
+    </td>
+  </tr>
+</tbody>
+```
+
+You can restyle the links and the input with normal CSS. The script is
+wrapped in try/catch so a failure does not break the rest of the page.
+
+When pagination is enabled, `page_number` (available in ERB) holds the
+total number of pages after the report has been fully generated.
+
 
 ### Template example
 
