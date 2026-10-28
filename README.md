@@ -230,7 +230,79 @@ To preview the structure, rename the file to `.html` and open it in a browser
 | `count(:field)` | Number of values |
 | `number` | Current page or group number |
 
+## Rails helpers
+
+You can make Rails view helpers available inside the ERB templates by calling
+`Repolho.include_rails_helpers!`. By default it includes
+`ActionView::Helpers::NumberHelper` (so you get `number_to_currency`,
+`number_with_precision`, etc.).
+
+### Inside a Rails application
+
+```ruby
+# config/initializers/repolho.rb
+Repolho.include_rails_helpers!
+```
+
+After that you can use the helpers normally in any template:
+
+```erb
+<td class="text-end"><%= number_to_currency(attr(:value)) %></td>
+<td><%= number_with_precision(sum(:value), precision: 2) %></td>
+```
+
+You can also pass extra modules:
+
+```ruby
+Repolho.include_rails_helpers!(
+  ActionView::Helpers::NumberHelper,
+  ActionView::Helpers::TextHelper
+)
+```
+
+### Outside Rails
+
+You need the corresponding gems. Directly requiring the individual helper file
+triggers an autoload problem in recent Rails versions, so load the helpers
+framework first:
+
+```ruby
+# Gemfile
+gem "actionview"
+
+require "action_view"
+require "action_view/helpers"          # loads NumberHelper and the rest
+Repolho.include_rails_helpers!
+```
+
+Alternatively (and often simpler), use `ActiveSupport::NumberHelper`, which is
+designed to be used outside of a view context. The method names are almost the
+same (`number_to_currency`, `number_to_rounded`, etc.):
+
+```ruby
+# Gemfile
+gem "activesupport"
+
+require "active_support/number_helper"
+Repolho.include_rails_helpers!(ActiveSupport::NumberHelper)
+```
+
+Note: some method names differ slightly between the two modules
+(`number_with_delimiter` vs `number_to_delimited`). Prefer the ActiveSupport
+version when you are not inside Rails.
+
+Instance variables from the Rails view (such as `@current_template`) are not
+automatically copied. Pass them explicitly through the `locals` hash:
+
+```ruby
+Repolho::Main.new(path, data, current_template: @current_template, user: current_user)
+```
+
+They become `@current_template` and `@user` inside the templates.
+
+
 ## Signing
+
 
 This gem is cryptographically signed. To verify the signature on install:
 
