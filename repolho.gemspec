@@ -14,13 +14,16 @@ Gem::Specification.new do |spec|
   spec.license       = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 
-  spec.files         = Dir["lib/**/*", "certs/**/*", "README.md", "LICENSE"]
+  spec.files         = Dir["lib/**/*", "certs/**/*", "README.md", "LICENSE", "test/**/*"]
   spec.require_paths = ["lib"]
 
   spec.cert_chain  = ["certs/taq.pem"]
   spec.signing_key = File.expand_path("~/.gemcert/gem-private_key.pem") if $PROGRAM_NAME.end_with?("gem")
 
   spec.add_dependency "nokogiri", "~> 1.16"
+
+  spec.add_development_dependency "minitest", "~> 5.20"
+  spec.add_development_dependency "rake", "~> 13.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage

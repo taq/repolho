@@ -300,6 +300,27 @@ Repolho::Main.new(path, data, current_template: @current_template, user: current
 
 They become `@current_template` and `@user` inside the templates.
 
+## Testing
+
+The project uses [Minitest](https://github.com/minitest/minitest).
+
+```bash
+# From the gem root
+bundle install
+bundle exec rake test
+# or
+ruby -Ilib:test test/stats_test.rb
+```
+
+Tests cover:
+
+- `Stats` (sum, avg, min, max, count, reset, numeric coercion)
+- `Container` (ERB rendering of headers/footers/rows, attribute access, stats delegation, status)
+- `Page` (row counting via `<tr>`, page open/close, page breaks, raw append)
+- `Report` (inheritance and composition)
+- `Main` (data normalization for hashes / ActiveRecord-like objects / models, section extraction, full HTML generation, groupings, page breaks, pagination, print CSS for orientation/paper, previous/after ERB)
+
+Integration tests assert on the generated HTML structure (`tbody.repolho-page`, data attributes, totals, labels).
 
 ## Signing
 
