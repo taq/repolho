@@ -19,6 +19,10 @@ module Repolho
   #   Repolho.include_rails_helpers!(ActionView::Helpers::NumberHelper, ActionView::Helpers::TextHelper)
   def self.include_rails_helpers!(*modules)
     modules = [ActionView::Helpers::NumberHelper] if modules.empty?
-    modules.each { |mod| Container.include(mod) }
+    modules.each do |mod|
+      next if Container.include?(mod)
+
+      Container.include(mod)
+    end
   end
 end
