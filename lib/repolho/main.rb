@@ -77,6 +77,8 @@ module Repolho
       @after       = ""
       @body        = ""
       @pagination  = false
+      @orientation = nil
+      @paper       = nil
       @pagination_labels = {
         first: "First",
         prev:  "<",
@@ -124,6 +126,15 @@ module Repolho
         end
       end
 
+      css = print_css
+      if css
+        if after_content =~ /<\/body>/i
+          after_content = after_content.sub(/<\/body>/i, "#{css}</body>")
+        else
+          after_content += css
+        end
+      end
+
       @page.append_raw(after_content)
     end
 
@@ -134,6 +145,25 @@ module Repolho
       @page.instance_variable_set(:@pagination_prev,  @pagination_labels[:prev])
       @page.instance_variable_set(:@pagination_next,  @pagination_labels[:next])
       @page.instance_variable_set(:@pagination_last,  @pagination_labels[:last])
+    end
+
+    def print_css
+      return nil unless @orientation || @paper
+
+      size_parts = []
+      size_parts << @paper if @paper
+      size_parts << @orientation if @orientation
+      size = size_parts.join(" ")
+
+      <<~HTML
+        <style>
+          @media print {
+            @page {
+              size: #{size};
+            }
+          }
+        </style>
+      HTML
     end
 
     def make_columns
@@ -199,6 +229,8 @@ module Repolho
 
       report_node = report.first
       @pagination = report_node["pagination"] == "true"
+      @orientation = report_node["orientation"]&.downcase
+      @paper       = report_node["paper"]
 
       if @pagination
         @pagination_labels[:first] = report_node["pagination-first"] if report_node["pagination-first"]

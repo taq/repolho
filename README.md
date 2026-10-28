@@ -58,7 +58,7 @@ sections). Everything inside the custom elements is processed as ERB.
 
 | Element | Purpose | Attributes |
 |---------|---------|------------|
-| `<report>` | Root container of the report | `pagination` (optional, `"true"`): enables client-side page navigation. Also accepts `pagination-first`, `pagination-prev`, `pagination-next`, `pagination-last` for custom labels. |
+| `<report>` | Root container of the report | `pagination` (optional, `"true"`): enables client-side page navigation. Also accepts `pagination-first`, `pagination-prev`, `pagination-next`, `pagination-last` for custom labels.<br>`orientation` (optional, `"portrait"` or `"landscape"`): page orientation for print.<br>`paper` (optional, e.g. `"A4"`, `"Letter"`): paper size for print. If either is present, a `@media print` style is injected at the end of `<body>`. |
 | `<report-page>` | Defines a page (required, only one) | `rows` (required): max data rows per page |
 | `<report-group>` | Nested grouping | `id` (required), `attr` (required), `reprint-header-on-page-break` (optional, `"true"`) |
 | `<report-header>` | Header of the current container | — |
