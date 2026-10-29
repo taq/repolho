@@ -79,6 +79,7 @@ module Repolho
       @pagination  = false
       @orientation = nil
       @paper       = nil
+      @last_page_template = nil
       @pagination_labels = {
         first: "First",
         prev:  "<",
@@ -103,6 +104,8 @@ module Repolho
       @data.each do |row|
         @report.call(:row, row)
       end
+
+      inject_last_page_content
 
       @report.call(:finish, nil)
       @page.finalize
@@ -139,6 +142,16 @@ module Repolho
     end
 
     private
+
+    def inject_last_page_content
+      return if @last_page_template.nil? || @last_page_template.strip.empty?
+
+      @page.mark_as_last!
+      rendered = render_erb(@last_page_template)
+      @page.inject_as_rows(rendered)
+      # Page footer is rendered later by the normal :finish path,
+      # after any remaining group footers.
+    end
 
     def inject_pagination_labels
       @page.instance_variable_set(:@pagination_first, @pagination_labels[:first])
@@ -247,6 +260,9 @@ module Repolho
 
       build_page(report)
       build_groups(report)
+
+      last_page = report.search("report-last-page").first
+      @last_page_template = last_page.inner_html if last_page
     end
 
     def build_page(report)

@@ -64,6 +64,37 @@ sections). Everything inside the custom elements is processed as ERB.
 | `<report-header>` | Header of the current container | — |
 | `<report-footer>` | Footer of the current container | — |
 | `<report-row>` | Template for each data row (inside the innermost group) | — |
+| `<report-last-page>` | Optional block rendered only at the end of the report, as additional rows on the last page. Counts toward the page row limit and can force a page break. | — |
+
+### Last page content (`<report-last-page>`)
+
+Optional element that is rendered **only after all data rows** have been processed.  
+Its content is injected as normal rows into the page flow, so:
+
+- It counts toward the `rows` limit of `<report-page>`.
+- If it does not fit on the current page, a new page is opened automatically.
+- The page footer of the final page is rendered **after** this block.
+
+Because the block is only ever emitted at the end, you do not need to check `last_page?` inside it.
+
+Example:
+
+```html
+<report>
+  <report-page rows="40">
+    <report-header>...</report-header>
+    <report-row>...</report-row>
+    <report-footer>
+      <tr><td>Page <%= page_number %></td></tr>
+    </report-footer>
+  </report-page>
+
+  <report-last-page>
+    <tr><td colspan="5">Final notes and signature</td></tr>
+    <tr><td colspan="5">______________________________</td></tr>
+  </report-last-page>
+</report>
+```
 
 ### Allowed HTML inside page content
 

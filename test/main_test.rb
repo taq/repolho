@@ -370,6 +370,38 @@ module Repolho
       refute_includes columns, "state"
     end
 
+    def test_last_page_content_is_injected_and_counts_as_rows
+      template_html = <<~HTML
+        <!DOCTYPE html>
+        <html><body>
+          <table>
+            <report>
+              <report-page rows="3">
+                <report-header><tr><th>H</th></tr></report-header>
+                <report-row><tr><td><%= attr(:id) %></td></tr></report-row>
+                <report-footer><tr><td>F</td></tr></report-footer>
+              </report-page>
+              <report-last-page>
+                <tr><td>LAST BLOCK LINE 1</td></tr>
+                <tr><td>LAST BLOCK LINE 2</td></tr>
+              </report-last-page>
+            </report>
+          </table>
+        </body></html>
+      HTML
+      template = write_temp_template(template_html)
+      main = Main.new(template.path, @data)  # 3 rows
+      main.run
+      html = main.content.join
+
+      assert_includes html, "LAST BLOCK LINE 1"
+      assert_includes html, "LAST BLOCK LINE 2"
+      # Should have caused a page break because 3 data + 2 last = more than rows=3
+      assert_operator html.scan(/repolho-page/).size, :>=, 2
+    ensure
+      template&.unlink
+    end
+
     def test_page_number_available_in_after_erb
       after_erb = <<~HTML
         <!DOCTYPE html>

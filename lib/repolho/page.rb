@@ -14,11 +14,33 @@ module Repolho
       @row_number  = 1
       @page_number = 1
       @page_open   = false
+      @last_page   = false
     end
 
     def rows=(number)
       @rows = number
       @valid_rows = @rows
+    end
+
+    def last_page?
+      @last_page
+    end
+
+    def mark_as_last!
+      @last_page = true
+    end
+
+    # Injects pre-rendered HTML (expected to contain <tr>s) as additional rows.
+    # Each <tr> is appended individually so normal page-break logic applies.
+    def inject_as_rows(html)
+      return if html.nil? || html.strip.empty?
+
+      Nokogiri::HTML(html).search("tr").each do |tr|
+        check_page_break
+        # After a break, status is FINISHED; reopen so later :finish can still emit the footer
+        @status = STARTED if @status == FINISHED
+        self << tr.to_html
+      end
     end
 
     def <<(content)
