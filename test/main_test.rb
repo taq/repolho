@@ -402,6 +402,38 @@ module Repolho
       template&.unlink
     end
 
+    def test_last_page_can_access_report_grand_total
+      template_html = <<~HTML
+        <!DOCTYPE html>
+        <html><body>
+          <table>
+            <report>
+              <report-page rows="10">
+                <report-row>
+                  <tr><td><%= attr(:id) %></td><td><%= attr(:value) %></td></tr>
+                </report-row>
+              </report-page>
+              <report-last-page>
+                <tr><td>Grand total from last page:</td><td><%= sum(:value, :report) %></td></tr>
+                <tr><td>Also via report object:</td><td><%= report.sum(:value) %></td></tr>
+              </report-last-page>
+            </report>
+          </table>
+        </body></html>
+      HTML
+      template = write_temp_template(template_html)
+      main = Main.new(template.path, @data)
+      main.run
+      html = main.content.join
+
+      # 10 + 20 + 15 = 45
+      assert_includes html, "Grand total from last page:"
+      assert_includes html, "45.0"
+      assert_includes html, "Also via report object:"
+    ensure
+      template&.unlink
+    end
+
     def test_page_number_available_in_after_erb
       after_erb = <<~HTML
         <!DOCTYPE html>

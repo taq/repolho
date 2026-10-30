@@ -77,24 +77,43 @@ Its content is injected as normal rows into the page flow, so:
 
 Because the block is only ever emitted at the end, you do not need to check `last_page?` inside it.
 
-Example:
+You can print the **overall report total** from this block by using the second argument of the statistics methods (see below):
 
 ```html
-<report>
-  <report-page rows="40">
-    <report-header>...</report-header>
-    <report-row>...</report-row>
-    <report-footer>
-      <tr><td>Page <%= page_number %></td></tr>
-    </report-footer>
-  </report-page>
-
-  <report-last-page>
-    <tr><td colspan="5">Final notes and signature</td></tr>
-    <tr><td colspan="5">______________________________</td></tr>
-  </report-last-page>
-</report>
+<report-last-page>
+  <tr>
+    <td colspan="4">Grand total</td>
+    <td><%= format("%.2f", sum(:value, :report)) %></td>
+  </tr>
+  <tr>
+    <td colspan="5">Final notes and signature</td>
+  </tr>
+</report-last-page>
 ```
+
+### Statistics context
+
+Every container keeps its own statistics. By default `sum`, `avg`, `count`, `min` and `max` operate on the current container.
+
+All statistics methods accept an optional second argument that selects another context:
+
+| Context | Meaning |
+|---------|---------|
+| `nil` (default) | Current container |
+| `:page` | The current page |
+| `:report` | The whole report (grand total) |
+| a `Container` object | That specific container |
+
+Examples:
+
+```erb
+<%= sum(:value) %>                 <!-- current group or page -->
+<%= sum(:value, :page) %>          <!-- current page total -->
+<%= sum(:value, :report) %>        <!-- overall report total -->
+<%= report.sum(:value) %>          <!-- same as above, via the report object -->
+```
+
+The `report` object is available in every ERB context (headers, footers, rows and last-page content).
 
 ### Allowed HTML inside page content
 
@@ -255,11 +274,12 @@ To preview the structure, rename the file to `.html` and open it in a browser
 | Method | Description |
 |--------|-------------|
 | `attr(:field)` | Value of the field on the current row |
-| `sum(:field)` | Sum within the current container |
-| `avg(:field)` | Average |
-| `min(:field)` / `max(:field)` | Minimum / maximum |
-| `count(:field)` | Number of values |
+| `sum(:field)` / `sum(:field, context)` | Sum within the current container, or in the given context (`:page`, `:report`) |
+| `avg(:field)` / `avg(:field, context)` | Average |
+| `min(:field)` / `max(:field)` (and with context) | Minimum / maximum |
+| `count(:field)` / `count(:field, context)` | Number of values |
 | `number` | Current page or group number |
+| `report` | The root `Report` container (useful to call `report.sum(:field)`) |
 
 ## Rails helpers
 

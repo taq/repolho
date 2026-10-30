@@ -89,6 +89,8 @@ module Repolho
 
       @report.containers << @page
       @report.page = @page
+      @report.report = @report
+      @page.report = @report
     end
 
     def content
@@ -299,6 +301,7 @@ module Repolho
       container.attr   = element["attr"]
       container.reprint_header_on_page_break = element["reprint-header-on-page-break"] == "true"
       container.page   = @page
+      container.report = @report
       container
     end
 
@@ -311,7 +314,7 @@ module Repolho
     def render_erb(content)
       return "" if content.nil? || content.empty?
 
-      ERB.new(content).result(@page.instance_eval { binding })
+      ERB.new(CGI.unescapeHTML(content)).result(@page.instance_eval { binding })
     end
   end
 end

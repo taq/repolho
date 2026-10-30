@@ -6,8 +6,8 @@ require_relative "stats"
 
 module Repolho
   class Container
-    attr_accessor :header, :footer, :containers, :row_template, :attr, :page, :status, :reprint_header_on_page_break
-    attr_reader :id, :number
+    attr_accessor :header, :footer, :containers, :row_template, :attr, :page, :report, :status, :reprint_header_on_page_break
+    attr_reader :id, :number, :stats
 
     UNSTARTED = 0
     STARTED   = 1
@@ -27,6 +27,7 @@ module Repolho
       @number       = 1
       @attr         = nil
       @page         = nil
+      @report       = nil
 
       create_locals
     end
@@ -70,24 +71,24 @@ module Repolho
 
     def row_number = @page.row_number
 
-    def sum(attr)
-      stat(attr)&.sum || 0.0
+    def sum(attr, context = nil)
+      stat(attr, context)&.sum || 0.0
     end
 
-    def avg(attr)
-      stat(attr)&.avg || 0.0
+    def avg(attr, context = nil)
+      stat(attr, context)&.avg || 0.0
     end
 
-    def count(attr)
-      stat(attr)&.count || 0
+    def count(attr, context = nil)
+      stat(attr, context)&.count || 0
     end
 
-    def min(attr)
-      stat(attr)&.min
+    def min(attr, context = nil)
+      stat(attr, context)&.min
     end
 
-    def max(attr)
-      stat(attr)&.max
+    def max(attr, context = nil)
+      stat(attr, context)&.max
     end
 
     def attr(attr)
@@ -127,8 +128,24 @@ module Repolho
       end
     end
 
-    def stat(attr)
-      @stats[attr.to_s]
+    def stat(attr, context = nil)
+      target_stats = resolve_stats(context)
+      target_stats&.[](attr.to_s)
+    end
+
+    def resolve_stats(context)
+      return @stats if context.nil?
+
+      case context
+      when :page
+        @page&.stats
+      when :report
+        @report&.stats
+      when Container
+        context.stats
+      else
+        @stats
+      end
     end
 
     def check_attribute_break(data)
