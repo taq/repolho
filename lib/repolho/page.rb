@@ -4,6 +4,7 @@
 module Repolho
   class Page < Container
     attr_reader :content, :row_number, :rows, :page_number
+    attr_accessor :min_row_for_break
 
     def initialize(id, locals, stats)
       super(id, locals, stats)
@@ -41,6 +42,18 @@ module Repolho
         @status = STARTED if @status == FINISHED
         self << tr.to_html
       end
+    end
+
+    # Fills the current page with blank rows up to the limit and forces a break
+    # using the existing page-break path. Called before emitting a group footer
+    # when the group requested page-break-after.
+    def pad_and_break
+      remaining = @valid_rows - @row_number
+      if remaining > 0
+        blank = %(<tr><td colspan="200">&nbsp;</td></tr>)
+        remaining.times { self << blank }
+      end
+      check_page_break
     end
 
     def <<(content)

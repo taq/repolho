@@ -247,6 +247,10 @@ module Repolho
       @orientation = report_node["orientation"]&.downcase
       @paper       = report_node["paper"]
 
+      if report_node["min-row-for-break"]
+        @page.min_row_for_break = report_node["min-row-for-break"].to_i
+      end
+
       if @pagination
         @pagination_labels[:first] = report_node["pagination-first"] if report_node["pagination-first"]
         @pagination_labels[:prev]  = report_node["pagination-prev"]  if report_node["pagination-prev"]
@@ -297,12 +301,21 @@ module Repolho
     def build_group(element)
       container = Container.new(element["id"], @locals, make_stats)
       container.header = info(element.search("> report-header").first)
-      container.footer = info(element.search("> report-footer").first)
+      footer_info = info(element.search("> report-footer").first)
+      container.footer = footer_info
+      container.footer_rows = count_trs(footer_info[:content])
       container.attr   = element["attr"]
       container.reprint_header_on_page_break = element["reprint-header-on-page-break"] == "true"
+      container.page_break_after = element["page-break-after"] == "true"
       container.page   = @page
       container.report = @report
       container
+    end
+
+    def count_trs(html)
+      return 0 if html.nil? || html.strip.empty?
+
+      Nokogiri::HTML(html).search("tr").size
     end
 
     def info(element)

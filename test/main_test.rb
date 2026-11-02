@@ -457,5 +457,71 @@ module Repolho
     ensure
       template&.unlink
     end
+
+    def test_page_break_after_group_pads_and_breaks
+      data = [
+        { "id" => 1, "name" => "Alice", "value" => 10.0, "state" => "SP" },
+        { "id" => 2, "name" => "Bob",   "value" => 20.0, "state" => "SP" },
+        { "id" => 3, "name" => "Carol", "value" => 15.0, "state" => "RJ" },
+        { "id" => 4, "name" => "Dave",  "value" => 25.0, "state" => "RJ" }
+      ]
+
+      template_content = GROUP_TEMPLATE.gsub(
+        '<report-group id="state" attr="state">',
+        '<report-group id="state" attr="state" page-break-after="true">'
+      ).gsub(
+        '<report-page rows="10">',
+        '<report-page rows="6">'
+      )
+
+      template = write_temp_template(template_content)
+      main = Main.new(template.path, data)
+      main.run
+      html = main.content.join
+      doc = html_doc(html)
+
+      pages = page_tbodies(doc)
+      assert pages.size >= 2, "Expected a forced page break after group, got #{pages.size}"
+
+      # Blank padding rows should be present
+      assert_includes html, "&nbsp;"
+
+      # Group footer of the first group should appear, and the second group header too
+      assert_includes html, "State total"
+      assert_includes html, "State: RJ"
+    ensure
+      template&.unlink
+    end
+
+    def test_min_row_for_break_skips_early_page
+      data = [
+        { "id" => 1, "name" => "Alice", "value" => 10.0, "state" => "SP" },
+        { "id" => 2, "name" => "Bob",   "value" => 20.0, "state" => "RJ" }
+      ]
+
+      # High threshold: page has barely started, so no forced break
+      template_content = GROUP_TEMPLATE.gsub(
+        "<report>",
+        '<report min-row-for-break="20">'
+      ).gsub(
+        '<report-group id="state" attr="state">',
+        '<report-group id="state" attr="state" page-break-after="true">'
+      ).gsub(
+        '<report-page rows="10">',
+        '<report-page rows="30">'
+      )
+
+      template = write_temp_template(template_content)
+      main = Main.new(template.path, data)
+      main.run
+      html = main.content.join
+      doc = html_doc(html)
+
+      pages = page_tbodies(doc)
+      assert_equal 1, pages.size, "Threshold should have prevented an early forced break"
+      refute_includes html, "&nbsp;"
+    ensure
+      template&.unlink
+    end
   end
 end

@@ -6,7 +6,7 @@ require_relative "stats"
 
 module Repolho
   class Container
-    attr_accessor :header, :footer, :containers, :row_template, :attr, :page, :report, :status, :reprint_header_on_page_break
+    attr_accessor :header, :footer, :containers, :row_template, :attr, :page, :report, :status, :reprint_header_on_page_break, :page_break_after, :footer_rows
     attr_reader :id, :number, :stats
 
     UNSTARTED = 0
@@ -28,6 +28,8 @@ module Repolho
       @attr         = nil
       @page         = nil
       @report       = nil
+      @page_break_after = false
+      @footer_rows  = 0
 
       create_locals
     end
@@ -164,10 +166,28 @@ module Repolho
           container.status = FINISHED
         end
 
+        # Optionally force a page break *before* emitting this group's footer
+        # so the footer starts on a fresh page. Blank rows fill the current
+        # page exactly to the limit; the existing check_page_break closes it.
+        if page_break_after && should_force_page_break?
+          @page.pad_and_break
+        end
+
         @page << finish
         reset_stats
         @status = FINISHED
       end
+    end
+
+    def should_force_page_break?
+      return false unless @page
+
+      min = @page.min_row_for_break
+      return true if min.nil? || min <= 0
+
+      # Only force when the current page has progressed past the threshold.
+      # Prevents a second break when the page has just started (e.g. row 5 < 35).
+      @page.row_number > min
     end
 
     def check_page_break

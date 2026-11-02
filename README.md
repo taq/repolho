@@ -54,13 +54,26 @@ Repolho uses a few custom elements inside a normal HTML document. Everything
 outside `<report>…</report>` is copied as-is (the `previous` and `after`
 sections). Everything inside the custom elements is processed as ERB.
 
+### Why `<report>` instead of `<repolho>`?
+
+The element names are intentionally generic (`<report>`, `<report-page>`,
+`<report-group>`, etc.) rather than namespaced under the gem (`<repolho>`,
+`<repolho-page>`, …).
+
+Using `repolho` would tie the markup to this specific tool. With `report`,
+the template describes a report structure, not a Ruby library. Someone
+working in another language or with another report engine can reuse the same
+markup (or a close subset of it) without carrying Repolho-specific names.
+The goal is a small, readable convention for report templates — not a
+proprietary dialect.
+
 ### Custom elements
 
 | Element | Purpose | Attributes |
 |---------|---------|------------|
-| `<report>` | Root container of the report | `pagination` (optional, `"true"`): enables client-side page navigation. Also accepts `pagination-first`, `pagination-prev`, `pagination-next`, `pagination-last` for custom labels.<br>`orientation` (optional, `"portrait"` or `"landscape"`): page orientation for print.<br>`paper` (optional, e.g. `"A4"`, `"Letter"`): paper size for print. If either is present, a `@media print` style is injected at the end of `<body>`. |
+| `<report>` | Root container of the report | `pagination` (optional, `"true"`): enables client-side page navigation. Also accepts `pagination-first`, `pagination-prev`, `pagination-next`, `pagination-last` for custom labels.<br>`orientation` (optional, `"portrait"` or `"landscape"`): page orientation for print.<br>`paper` (optional, e.g. `"A4"`, `"Letter"`): paper size for print. If either is present, a `@media print` style is injected at the end of `<body>`.<br>`min-row-for-break` (optional, integer): when a group has `page-break-after="true"`, the forced break is skipped if the current page row number is less than or equal to this value. Prevents an extra break when a page has just started. |
 | `<report-page>` | Defines a page (required, only one) | `rows` (required): max data rows per page |
-| `<report-group>` | Nested grouping | `id` (required), `attr` (required), `reprint-header-on-page-break` (optional, `"true"`) |
+| `<report-group>` | Nested grouping | `id` (required), `attr` (required), `reprint-header-on-page-break` (optional, `"true"`), `page-break-after` (optional, `"true"`): after the group ends, fill the current page with blank rows and force a page break *before* emitting the group footer, so the footer starts on a fresh page. Respects `min-row-for-break` on `<report>`. |
 | `<report-header>` | Header of the current container | — |
 | `<report-footer>` | Footer of the current container | — |
 | `<report-row>` | Template for each data row (inside the innermost group) | — |
