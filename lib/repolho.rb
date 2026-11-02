@@ -6,6 +6,7 @@ require_relative "repolho/container"
 require_relative "repolho/page"
 require_relative "repolho/report"
 require_relative "repolho/main"
+require_relative "repolho/template_generator"
 
 module Repolho
   # Includes Rails helper modules into Container so they become available
@@ -13,6 +14,11 @@ module Repolho
   #
   # By default includes ActionView::Helpers::NumberHelper.
   # Pass additional modules if needed.
+  #
+  # The method is idempotent: modules already included are skipped.
+  #
+  # Outside a full Rails environment you must load the helpers correctly
+  # before calling this method (see README).
   #
   # Example:
   #   Repolho.include_rails_helpers!
@@ -24,5 +30,7 @@ module Repolho
 
       Container.include(mod)
     end
+
   end
+
 end

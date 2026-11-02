@@ -48,6 +48,63 @@ render html: html.html_safe
 # or File.write("report.html", html)
 ```
 
+## Generating a template
+
+`Repolho::TemplateGenerator` creates a `.rep.erb` file from a base template
+and column metadata. The base template must already contain a `<report-page>`
+element (the page is required, matching the runtime) and two markers:
+
+- `<!-- REPORT:HEADERS -->` — replaced by the generated `<th>` cells
+- `<!-- REPORT:ROW -->` — replaced by the generated `<report-row>`
+
+Column names are taken from the data source without executing the full query
+when possible (`ActiveRecord::Result#columns`, a Relation's selected columns
+or model column names, an array of hashes/models, or an explicit array of
+column names).
+
+```ruby
+# From a Relation or Result (columns only)
+Repolho::TemplateGenerator.new(
+  "app/views/reports/base.rep.erb",
+  Order.where(status: "paid")
+).write("app/views/reports/orders.rep.erb")
+
+# Explicit columns + custom labels + numeric formatting
+Repolho::TemplateGenerator.new(
+  "app/views/reports/base.rep.erb",
+  %w[id customer_name total],
+  labels:  { "total" => "Total (R$)" },
+  numeric: %w[total]
+).write("app/views/reports/orders.rep.erb")
+```
+
+When running under Rails (or whenever `I18n` is available), header labels are
+looked up case-insensitively under
+`activerecord.attributes.<model>.<column>` (if a `model:` is given) or
+`repolho.attributes.<column>`. The lookup tries the original key, the
+downcase form and the upcase form. If no translation is found, a simple
+humanized name is used.
+
+Base template skeleton:
+
+```html
+<report>
+  <report-page rows="40">
+    <report-header>
+      <tr>
+        <!-- REPORT:HEADERS -->
+      </tr>
+    </report-header>
+
+    <!-- REPORT:ROW -->
+
+    <report-footer>
+      <!-- optional page totals -->
+    </report-footer>
+  </report-page>
+</report>
+```
+
 ## Template (`.rep.erb`)
 
 Repolho uses a few custom elements inside a normal HTML document. Everything
