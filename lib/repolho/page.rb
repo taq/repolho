@@ -45,8 +45,13 @@ module Repolho
     end
 
     # Fills the current page with blank rows up to the limit and forces a break
-    # using the existing page-break path. Called before emitting a group footer
-    # when the group requested page-break-after.
+    # using the existing page-break path. Called *after* a group footer has
+    # already been emitted, so the footer stays on the current page and the
+    # next group starts on a fresh page.
+    #
+    # After the break, the new page is opened and its header is emitted
+    # immediately so subsequent content (the group footer) appears *after*
+    # the page header, not before it.
     def pad_and_break
       remaining = @valid_rows - @row_number
       if remaining > 0
@@ -54,6 +59,18 @@ module Repolho
         remaining.times { self << blank }
       end
       check_page_break
+
+      # Open the new page and emit its header right away.
+      # check_page_break left status as FINISHED; we start the page now
+      # so later check_started does not emit the header again (late).
+      return if @page_open
+
+      open_page
+      if @status == FINISHED
+        header_html = start
+        self << header_html if header_html && !header_html.to_s.strip.empty?
+        @status = STARTED
+      end
     end
 
     def <<(content)

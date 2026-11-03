@@ -166,16 +166,18 @@ module Repolho
           container.status = FINISHED
         end
 
-        # Optionally force a page break *before* emitting this group's footer
-        # so the footer starts on a fresh page. Blank rows fill the current
-        # page exactly to the limit; the existing check_page_break closes it.
-        if page_break_after && should_force_page_break?
-          @page.pad_and_break
-        end
-
+        # Emit this group's footer on the current page (it stays with its data).
         @page << finish
         reset_stats
         @status = FINISHED
+
+        # Then, if requested, fill the rest of the page with blanks and force
+        # a break so the *next* group starts on a fresh page.
+        # min-row-for-break skips this when the page has barely started
+        # (e.g. the footer itself already caused a break).
+        if page_break_after && should_force_page_break?
+          @page.pad_and_break
+        end
       end
     end
 
