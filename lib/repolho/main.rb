@@ -86,6 +86,10 @@ module Repolho
         next:  ">",
         last:  "Last"
       }
+      @ran             = false
+      @generation_time = nil
+      @title           = nil
+      @stats_snapshot  = nil
 
       @report.containers << @page
       @report.page = @page
@@ -97,7 +101,27 @@ module Repolho
       @page.content
     end
 
+    # Returns metadata after the report has been generated.
+    # Returns nil if called before #run.
+    # Groups reflect only the last segment that was processed (stats are reset on breaks).
+    def metadata
+      return nil unless @ran
+
+      {
+        title: @title,
+        pages: @page.page_number,
+        generation_time: @generation_time,
+        template: @path,
+        report: {
+          stats: @stats_snapshot[:report]
+        },
+        groups: @stats_snapshot[:groups]
+      }
+    end
+
     def run
+      start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
       parse
 
       @page.append_raw(render_erb(@previous))
@@ -106,6 +130,13 @@ module Repolho
       @data.each do |row|
         @report.call(:row, row)
       end
+
+      # Snapshot stats before the final :finish resets them.
+      # Report keeps the full accumulation; groups keep only their last segment.
+      @stats_snapshot = {
+        report: stats_to_hash(@report.stats),
+        groups: collect_groups_with_data
+      }
 
       inject_last_page_content
 
@@ -141,6 +172,9 @@ module Repolho
       end
 
       @page.append_raw(after_content)
+
+      @generation_time = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
+      @ran = true
     end
 
     private
@@ -225,8 +259,15 @@ module Repolho
 
     def parse
       content = File.read(@path)
+      extract_title(content)
       extract_sections(content)
       build_report_structure
+    end
+
+    def extract_title(content)
+      doc = Nokogiri::HTML.parse(content)
+      title = doc.at_css("title")&.text&.strip
+      @title = title.nil? || title.empty? ? nil : title
     end
 
     def extract_sections(content)
@@ -328,6 +369,48 @@ module Repolho
       return "" if content.nil? || content.empty?
 
       ERB.new(CGI.unescapeHTML(content)).result(@page.instance_eval { binding })
+    end
+
+    # Builds a hash of attribute => {sum, min, max, count, avg} from a Stats collection.
+    # Prefers Integer when the value is a whole number. Skips attributes with no data.
+    def stats_to_hash(stats)
+      result = {}
+      stats.each do |attr, s|
+        next if s.count.zero?
+
+        result[attr] = {
+          sum:   prefer_integer(s.sum),
+          min:   prefer_integer(s.min),
+          max:   prefer_integer(s.max),
+          count: s.count,
+          avg:   prefer_integer(s.avg)
+        }
+      end
+      result
+    end
+
+    def prefer_integer(value)
+      return value unless value.is_a?(Numeric)
+      (value == value.to_i) ? value.to_i : value
+    end
+
+    # Collects groups that processed at least one row (flat list, no nesting).
+    # Only the last segment's stats are available (resets happen on attribute breaks).
+    def collect_groups_with_data
+      groups = []
+      collect_groups_recursive(@page.containers, groups)
+      groups.filter_map do |group|
+        stats = stats_to_hash(group.stats)
+        { id: group.id, stats: stats } if stats.any?
+      end
+    end
+
+    def collect_groups_recursive(containers, acc)
+      containers.each do |container|
+        next if container.is_a?(Page)
+        acc << container
+        collect_groups_recursive(container.containers, acc) if container.containers.any?
+      end
     end
   end
 end

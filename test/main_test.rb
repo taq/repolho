@@ -471,7 +471,7 @@ module Repolho
         '<report-group id="state" attr="state" page-break-after="true">'
       ).gsub(
         '<report-page rows="10">',
-        '<report-page rows="6">'
+        '<report-page rows="20">'
       )
 
       template = write_temp_template(template_content)
@@ -520,6 +520,97 @@ module Repolho
       pages = page_tbodies(doc)
       assert_equal 1, pages.size, "Threshold should have prevented an early forced break"
       refute_includes html, "&nbsp;"
+    ensure
+      template&.unlink
+    end
+
+    def test_metadata_returns_nil_before_run
+      template = write_temp_template(SIMPLE_TEMPLATE)
+      main = Main.new(template.path, @data)
+      assert_nil main.metadata
+    ensure
+      template&.unlink
+    end
+
+    def test_metadata_after_run_simple_report
+      template = write_temp_template(SIMPLE_TEMPLATE)
+      main = Main.new(template.path, @data)
+      main.run
+
+      meta = main.metadata
+      refute_nil meta
+
+      assert_equal "Test", meta[:title]
+      assert_equal template.path, meta[:template]
+      assert_kind_of Float, meta[:generation_time]
+      assert meta[:generation_time] >= 0
+      # rows="5" plus headers/footers produces 2 pages with 3 data rows
+      assert_equal 2, meta[:pages]
+
+      # Report stats are cumulative
+      value_stats = meta[:report][:stats]["value"]
+      assert_equal 45, value_stats[:sum]      # 10+20+15
+      assert_equal 10, value_stats[:min]
+      assert_equal 20, value_stats[:max]
+      assert_equal 3,  value_stats[:count]
+      assert_equal 15, value_stats[:avg]
+
+      # No groups in this template
+      assert_empty meta[:groups]
+    ensure
+      template&.unlink
+    end
+
+    def test_metadata_includes_groups_that_processed_data
+      template = write_temp_template(GROUP_TEMPLATE)
+      main = Main.new(template.path, @data)
+      main.run
+
+      meta = main.metadata
+      refute_nil meta
+
+      # Last group is RJ (only Carol, value 15)
+      groups = meta[:groups]
+      assert_equal 1, groups.size
+      assert_equal "state", groups.first[:id]
+
+      state_stats = groups.first[:stats]["value"]
+      assert_equal 15, state_stats[:sum]
+      assert_equal 15, state_stats[:min]
+      assert_equal 15, state_stats[:max]
+      assert_equal 1,  state_stats[:count]
+      assert_equal 15, state_stats[:avg]
+
+      # Report still has the full total
+      assert_equal 45, meta[:report][:stats]["value"][:sum]
+    ensure
+      template&.unlink
+    end
+
+    def test_metadata_prefers_integers_for_whole_numbers
+      data = [{ "id" => 1, "value" => 10 }]
+      # Use a large page size so everything fits and stats are easy to predict
+      content = SIMPLE_TEMPLATE.gsub('rows="5"', 'rows="20"')
+      template = write_temp_template(content)
+      main = Main.new(template.path, data)
+      main.run
+
+      stats = main.metadata[:report][:stats]["value"]
+      assert_kind_of Integer, stats[:sum]
+      assert_kind_of Integer, stats[:min]
+      assert_kind_of Integer, stats[:max]
+      assert_kind_of Integer, stats[:count]
+      assert_kind_of Integer, stats[:avg]
+    ensure
+      template&.unlink
+    end
+
+    def test_metadata_no_title
+      content = SIMPLE_TEMPLATE.gsub("<title>Test</title>", "")
+      template = write_temp_template(content)
+      main = Main.new(template.path, @data)
+      main.run
+      assert_nil main.metadata[:title]
     ensure
       template&.unlink
     end

@@ -39,6 +39,10 @@ report = Repolho::Main.new("app/views/reports/sales.rep.erb", rows, { company: "
 report.run
 
 html = report.content.join
+
+# Optional: metadata after run (nil before run)
+# meta = report.metadata
+# meta[:title], meta[:pages], meta[:generation_time], meta[:report][:stats], meta[:groups]
 ```
 
 Or with Rails:
