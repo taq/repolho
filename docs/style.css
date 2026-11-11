@@ -199,7 +199,8 @@ header {
   overflow-x: auto;
   font-family: "SF Mono", Monaco, Consolas, monospace;
   font-size: 0.9rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  white-space: pre;
 }
 
 .code .comment { color: #546e7a; }
