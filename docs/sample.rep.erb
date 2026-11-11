@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sales Report</title>
+  <style>
+    body { font-family: system-ui, sans-serif; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: left; }
+    th { background: #1b5e20; color: white; }
+    .group-header { background: #e8f5e9; font-weight: bold; }
+    .subtotal { font-weight: bold; background: #f5f5f5; }
+    .page-footer { font-size: 0.85rem; color: #666; }
+  </style>
+</head>
+<body>
+  <h1><%= locals[:company] || "Acme Corp" %> — Sales Report</h1>
+  <p>Generated on <%= Time.now.strftime("%Y-%m-%d") %></p>
+
+  <table>
+    <report paper="A4" orientation="portrait" pagination="true">
+      <report-page rows="15">
+        <report-header>
+          <tr>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+        </report-header>
+
+        <report-group id="category" attr="category" reprint-header-on-page-break="true">
+          <report-header>
+            <tr class="group-header">
+              <td colspan="4">Category: <%= attr(:category) %></td>
+            </tr>
+          </report-header>
+
+          <report-row>
+            <tr>
+              <td><%= attr(:product) %></td>
+              <td><%= attr(:qty) %></td>
+              <td><%= number_to_currency(attr(:unit_price)) rescue attr(:unit_price) %></td>
+              <td><%= number_to_currency(attr(:total)) rescue attr(:total) %></td>
+            </tr>
+          </report-row>
+
+          <report-footer>
+            <tr class="subtotal">
+              <td colspan="3">Subtotal for <%= attr(:category) %></td>
+              <td><%= number_to_currency(sum(:total)) rescue sum(:total) %></td>
+            </tr>
+          </report-footer>
+        </report-group>
+
+        <report-footer>
+          <tr class="page-footer">
+            <td colspan="4">Page <%= page_number %> — continued…</td>
+          </tr>
+        </report-footer>
+      </report-page>
+
+      <report-last-page>
+        <tr class="subtotal">
+          <td colspan="3">Grand total</td>
+          <td><%= number_to_currency(sum(:total, :report)) rescue sum(:total, :report) %></td>
+        </tr>
+      </report-last-page>
+    </report>
+  </table>
+</body>
+</html>

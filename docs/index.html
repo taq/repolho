@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repolho — A layered report generator for Ruby</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="images/logo.jpg">
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a href="#" class="logo">
+        <img src="images/logo.png" alt="Repolho logo">
+        Repolho
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#example">Example</a></li>
+        <li><a href="#usage">Usage</a></li>
+        <li><a href="#rails">Rails</a></li>
+        <li><a href="https://github.com/taq/repolho" target="_blank">GitHub</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <img src="images/hero.jpg" alt="Repolho — A layered report generator for Ruby" style="max-width: 100%; height: auto; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.08);">
+      <p class="lead">
+        Create structured HTML reports from your data with nested groups, page breaks, headers, footers and automatic statistics — all from a simple template.
+      </p>
+      <a href="#usage" class="btn">Get started</a>
+      <a href="https://github.com/taq/repolho" class="btn secondary" target="_blank">View on GitHub</a>
+    </div>
+  </section>
+
+  <section class="section" id="about">
+    <div class="container">
+      <div class="name-explanation">
+        <p>
+          <strong>Repolho</strong> is Portuguese for <strong>“cabbage”</strong>.
+        </p>
+        <p>
+          Just like a cabbage is made of many layered leaves that wrap around each other, a report is built from nested layers: the report itself, pages, groups, headers and footers. Each layer keeps its own statistics and structure.
+        </p>
+        <p>
+          The file extension <code>.rep</code> comes from both <em>repolho</em> and <em>report</em>.
+        </p>
+      </div>
+
+      <p style="text-align: center; max-width: 700px; margin: 0 auto;">
+        Repolho is a cousin of <a href="https://phpreports.sourceforge.net/" target="_blank">PHPReports</a>, the report generator I wrote in PHP in the early 2000s. That project used XML templates transformed with XSLT and helped a lot of people produce printable reports from their databases. The same ideas — groups, headers, footers and page control — live on here, now in Ruby, with ERB and a much simpler workflow.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="features">
+    <div class="container">
+      <h2>What it does</h2>
+      <p class="subtitle">Only the features that matter. Technical details live in the GitHub repository.</p>
+
+      <div class="features">
+        <div class="feature">
+          <h3>Nested groups</h3>
+          <p>Group data by any attribute. Groups can be nested as deep as you need. Each group has its own header, footer and statistics.</p>
+        </div>
+        <div class="feature">
+          <h3>Page breaks</h3>
+          <p>Define how many rows fit on a page. Repolho automatically starts a new page and can reprint group headers after the break.</p>
+        </div>
+        <div class="feature">
+          <h3>Headers & footers</h3>
+          <p>Report-level, page-level and group-level headers and footers. Use them for titles, column names, subtotals or signatures.</p>
+        </div>
+        <div class="feature">
+          <h3>Statistics</h3>
+          <p>Automatic sum, average, min, max and count for every numeric column. Ask for the current group, the current page, or the whole report.</p>
+        </div>
+        <div class="feature">
+          <h3>Print-ready</h3>
+          <p>Optional paper size and orientation. Client-side pagination so users can navigate long reports in the browser. Forced page breaks after groups when you want a clean start.</p>
+        </div>
+        <div class="feature">
+          <h3>Last page content</h3>
+          <p>Add a special block that only appears at the end of the report — perfect for grand totals, notes or a signature line.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="example">
+    <div class="container">
+      <h2>See it in action</h2>
+      <p class="subtitle">A sales report grouped by category, with page breaks at roughly 15 rows. The second image shows the header being reprinted after the break.</p>
+
+      <div class="example">
+        <div>
+          <img src="images/report-page1.jpg" alt="Sample report – page 1">
+          <p style="text-align: center; color: var(--text-muted); margin-top: 0.5rem;">Page 1 — group header and subtotal</p>
+        </div>
+        <div>
+          <img src="images/report-page2.jpg" alt="Sample report – page 2">
+          <p style="text-align: center; color: var(--text-muted); margin-top: 0.5rem;">Page 2 — header reprinted, new group starts</p>
+        </div>
+      </div>
+
+      <p style="text-align: center; margin-top: 2rem;">
+        The template is a normal HTML file with a few special elements. Everything outside the report is left as-is; everything inside is processed as ERB.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="usage">
+    <div class="container">
+      <h2>Minimal usage</h2>
+      <p class="subtitle">Put your template in a <code>.rep.erb</code> file and give Repolho the data.</p>
+
+      <div class="code">
+<span class="comment"># plain Ruby</span>
+<span class="keyword">require</span> <span class="string">"repolho"</span>
+
+data = Order.connection.exec_query(sql)
+<span class="comment"># or any array of hashes / ActiveRecord models / Relation</span>
+
+report = Repolho::Main.new(<span class="string">"reports/sales.rep.erb"</span>, data, { company: <span class="string">"Acme"</span> })
+report.run
+
+html = report.content.join
+      </div>
+
+      <p style="margin-top: 1.5rem;">
+        That’s the whole idea. The template describes the structure; your data fills it. For the full template syntax and all options, see the <a href="https://github.com/taq/repolho" target="_blank">repository</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" id="rails">
+    <div class="container">
+      <h2>Rails integration</h2>
+      <p class="subtitle">Non-invasive. Use Repolho without Rails, or bring Rails into it — not the other way around.</p>
+
+      <div class="rails-note">
+        <p><strong>Suggested convention:</strong> put your <code>.rep.erb</code> templates in <code>app/views/reports/</code>.</p>
+        <p>You keep full control of the query and the rendering. Repolho does not take over your controllers or views.</p>
+      </div>
+
+      <div class="code">
+<span class="comment"># app/controllers/reports_controller.rb</span>
+<span class="keyword">class</span> ReportsController < ApplicationController
+  <span class="keyword">def</span> sales
+    data = Order.where(status: <span class="string">"paid"</span>).order(:category, :created_at)
+
+    report = Repolho::Main.new(
+      <span class="string">"app/views/reports/sales.rep.erb"</span>,
+      data,
+      { title: <span class="string">"Paid orders"</span> }
+    )
+    report.run
+
+    render html: report.content.join.html_safe
+  <span class="keyword">end</span>
+<span class="keyword">end</span>
+      </div>
+
+      <p style="margin-top: 1.5rem;">
+        Need it in the background? Generate the HTML inside a job and store or email the result. The same code works.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>
+        <a href="https://github.com/taq/repolho">github.com/taq/repolho</a> ·
+        Cousin of <a href="https://phpreports.sourceforge.net/">PHPReports</a>
+      </p>
+      <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+        Made with layers. Like a cabbage.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
