@@ -653,6 +653,82 @@ module Repolho
       template&.unlink
     end
 
+
+    def test_stats_allow_limits_tracked_columns
+      template_html = <<~HTML
+        <!DOCTYPE html>
+        <html><body>
+          <table>
+            <report stats="value">
+              <report-page rows="10">
+                <report-row>
+                  <tr><td><%= attr(:id) %></td><td><%= sum(:value) %></td></tr>
+                </report-row>
+              </report-page>
+            </report>
+          </table>
+        </body></html>
+      HTML
+      template = write_temp_template(template_html)
+      main = Main.new(template.path, @data)
+      main.run
+      meta = main.metadata
+
+      assert_includes meta[:report][:stats].keys, "value"
+      refute_includes meta[:report][:stats].keys, "id"
+      assert_equal 45, meta[:report][:stats]["value"][:sum]
+    ensure
+      template&.unlink
+    end
+
+    def test_ignore_stats_excludes_listed_columns
+      template_html = <<~HTML
+        <!DOCTYPE html>
+        <html><body>
+          <table>
+            <report ignore-stats="id">
+              <report-page rows="10">
+                <report-row>
+                  <tr><td><%= attr(:id) %></td><td><%= attr(:value) %></td></tr>
+                </report-row>
+              </report-page>
+            </report>
+          </table>
+        </body></html>
+      HTML
+      template = write_temp_template(template_html)
+      main = Main.new(template.path, @data)
+      main.run
+      meta = main.metadata
+
+      assert_includes meta[:report][:stats].keys, "value"
+      refute_includes meta[:report][:stats].keys, "id"
+    ensure
+      template&.unlink
+    end
+
+    def test_stats_allow_takes_precedence_over_ignore
+      template_html = <<~HTML
+        <!DOCTYPE html>
+        <html><body>
+          <table>
+            <report stats="value" ignore-stats="value">
+              <report-page rows="10">
+                <report-row><tr><td><%= attr(:value) %></td></tr></report-row>
+              </report-page>
+            </report>
+          </table>
+        </body></html>
+      HTML
+      template = write_temp_template(template_html)
+      main = Main.new(template.path, @data)
+      main.run
+
+      assert_includes main.metadata[:report][:stats].keys, "value"
+    ensure
+      template&.unlink
+    end
+
     def test_metadata_no_title
       content = SIMPLE_TEMPLATE.gsub("<title>Test</title>", "")
       template = write_temp_template(content)

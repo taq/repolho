@@ -165,6 +165,17 @@ You can print the **overall report total** from this block by using the second a
 </report-last-page>
 ```
 
+
+### Limiting statistics
+
+By default every numeric column is tracked. To keep metadata (and the work)
+focused on the measures that matter, set one of these attributes on `<report>`:
+
+- `stats="PE_TOTA,PE_LPRO"` — only these columns
+- `ignore-stats="ID_PEDI,ID_FILI,PE_NUME"` — all numeric columns except these
+
+If both are present, `stats` wins. Columns are matched by name (case-sensitive).
+
 ### Statistics context
 
 Every container keeps its own statistics. By default `sum`, `avg`, `count`, `min` and `max` operate on the current container.

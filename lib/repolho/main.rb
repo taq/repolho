@@ -277,6 +277,36 @@ module Repolho
       end
     end
 
+    # Restricts which numeric columns receive statistics.
+    # - stats="A,B"         allow: only these columns
+    # - ignore-stats="A,B"  ignore: all numeric columns except these
+    # stats wins if both are present. When neither is set, every
+    # numeric column is tracked (previous behaviour).
+    def apply_stats_filter(report_node)
+      allow  = split_attr(report_node["stats"])
+      ignore = split_attr(report_node["ignore-stats"])
+
+      return if allow.empty? && ignore.empty?
+
+      @columns = if allow.any?
+        @columns & allow
+      else
+        @columns - ignore
+      end
+
+      # Page and report were created in initialize with the full set.
+      # Groups are built afterwards and pick up the filtered columns.
+      filtered = make_stats
+      @page.instance_variable_set(:@stats, filtered)
+      @report.instance_variable_set(:@stats, make_stats)
+    end
+
+    def split_attr(value)
+      return [] if value.nil? || value.strip.empty?
+
+      value.split(",").map(&:strip).reject(&:empty?)
+    end
+
     def parse
       content = File.read(@path)
       extract_title(content)
@@ -311,6 +341,8 @@ module Repolho
       if report_node["min-row-for-break"]
         @page.min_row_for_break = report_node["min-row-for-break"].to_i
       end
+
+      apply_stats_filter(report_node)
 
       if @pagination
         @pagination_labels[:first] = report_node["pagination-first"] if report_node["pagination-first"]
