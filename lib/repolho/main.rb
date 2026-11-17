@@ -138,6 +138,11 @@ module Repolho
         groups: collect_groups_with_data
       }
 
+      # Close any groups that are still open so their footers appear
+      # *before* the last-page content. The subsequent :finish will
+      # skip them (status == FINISHED) and only emit page/report footers.
+      finish_open_groups(@page)
+
       inject_last_page_content
 
       @report.call(:finish, nil)
@@ -185,8 +190,23 @@ module Repolho
       @page.mark_as_last!
       rendered = render_erb(@last_page_template)
       @page.inject_as_rows(rendered)
-      # Page footer is rendered later by the normal :finish path,
-      # after any remaining group footers.
+      # Page footer is rendered later by the normal :finish path.
+      # Group footers were already emitted by finish_open_groups.
+    end
+
+    # Depth-first: finish nested groups before their parents so footers
+    # appear in the correct nesting order. Only closes containers that
+    # have actually started (have data).
+    def finish_open_groups(container)
+      container.containers.each do |child|
+        finish_open_groups(child)
+
+        next unless child.status == Container::STARTED
+
+        @page << child.finish
+        child.reset_stats
+        child.status = Container::FINISHED
+      end
     end
 
     def inject_pagination_labels

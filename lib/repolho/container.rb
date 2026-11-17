@@ -42,7 +42,7 @@ module Repolho
 
       @cur_row = data if data
       update_stats if data && type == :row
-      check_started
+      check_started(type)
 
       @containers.each do |container|
         container.call(type, data)
@@ -205,8 +205,11 @@ module Repolho
       force_header_reprint_on_children
     end
 
-    def check_started
-      return unless @status != STARTED
+    def check_started(type = :row)
+      return if @status == STARTED
+      # On the final :finish, do not re-open a container that was already closed
+      # (e.g. groups finished early so their footer appears before last-page content).
+      return if type == :finish && @status == FINISHED
 
       @page << start
       @status = STARTED

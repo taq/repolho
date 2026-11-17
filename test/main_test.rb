@@ -605,6 +605,54 @@ module Repolho
       template&.unlink
     end
 
+
+    def test_last_page_content_appears_after_group_footer
+      template_html = <<~HTML
+        <!DOCTYPE html>
+        <html><body>
+          <table>
+            <report>
+              <report-page rows="20">
+                <report-group id="state" attr="state">
+                  <report-header>
+                    <tr><td>Group: <%= attr(:state) %></td></tr>
+                  </report-header>
+                  <report-row>
+                    <tr><td><%= attr(:name) %></td><td><%= attr(:value) %></td></tr>
+                  </report-row>
+                  <report-footer>
+                    <tr><td>State total</td><td><%= sum(:value) %></td></tr>
+                  </report-footer>
+                </report-group>
+                <report-last-page>
+                  <tr><td>GRAND TOTAL</td><td><%= sum(:value, :report) %></td></tr>
+                </report-last-page>
+              </report-page>
+            </report>
+          </table>
+        </body></html>
+      HTML
+      template = write_temp_template(template_html)
+      main = Main.new(template.path, @data)
+      main.run
+      html = main.content.join
+
+      # Last group is RJ (value 15). Its footer must appear before the grand total.
+      state_total_pos = html.index("State total")
+      grand_pos = html.index("GRAND TOTAL")
+
+      assert state_total_pos, "group footer missing"
+      assert grand_pos, "last-page content missing"
+      assert state_total_pos < grand_pos,
+             "report-last-page must appear after the last group footer"
+
+      # The last group's total (15.0) should be present, and the grand total (45.0) after it.
+      assert_includes html, "15.0"
+      assert_includes html, "45.0"
+    ensure
+      template&.unlink
+    end
+
     def test_metadata_no_title
       content = SIMPLE_TEMPLATE.gsub("<title>Test</title>", "")
       template = write_temp_template(content)
