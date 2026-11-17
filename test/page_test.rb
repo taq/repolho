@@ -72,6 +72,22 @@ module Repolho
       assert_equal 0, @page.row_number
     end
 
+
+    def test_finalize_removes_empty_trailing_page
+      @page << "<tr><td>real</td></tr>"
+      @page.send(:close_page)
+
+      # Simulate the empty page opened by a blank append after an exact fill.
+      @page.send(:open_page)
+      @page << ""
+      @page.finalize
+
+      joined = @page.content.join
+      assert_includes joined, 'data-page="1"'
+      refute_includes joined, 'data-page="2"'
+      assert_equal 2, @page.page_number # one past the last real page
+    end
+
     def test_content_is_array_of_strings
       @page.append_raw("before")
       @page << "<tr><td>row</td></tr>"

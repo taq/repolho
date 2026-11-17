@@ -110,9 +110,43 @@ module Repolho
 
     def finalize
       close_page
+      remove_empty_trailing_pages
     end
 
     private
+
+    # Drops trailing pages that contain no <tr>. This happens when content
+    # lands exactly on the page limit: check_page_break closes the page, then
+    # a subsequent empty append (e.g. an empty report footer) opens a new
+    # page that receives nothing. Post-processing is the reliable fix because
+    # the limit is only known after the rows have been emitted.
+    def remove_empty_trailing_pages
+      loop do
+        break unless remove_one_empty_trailing_page
+
+        @page_number -= 1
+      end
+    end
+
+    def remove_one_empty_trailing_page
+      open_idx = @content.rindex { |c| c.is_a?(String) && c.include?('class="repolho-page"') }
+      return false unless open_idx
+
+      # Keep at least one page.
+      earlier = @content[0...open_idx]
+      return false unless earlier.any? { |c| c.to_s.include?('class="repolho-page"') }
+
+      rest = @content[(open_idx + 1)..]
+      close_rel = rest.index { |c| c.is_a?(String) && c.strip == "</tbody>" }
+      return false unless close_rel
+
+      between = rest[0...close_rel]
+      return false unless between.all? { |c| c.to_s.strip.empty? }
+
+      close_idx = open_idx + 1 + close_rel
+      @content.slice!(open_idx..close_idx)
+      true
+    end
 
     def check_page_break
       return unless @row_number >= @valid_rows
